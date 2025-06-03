@@ -1,0 +1,16 @@
+__pycache__/*
+cc_ap/*
+cc_sac/*
+divergence/*
+figs/*
+force/*
+information_plots/*
+old_traces/*
+package_tests/*
+traces_ap/*
+traces_sac/*
+triangle_convergence/*
+detrend_data.py
+triangle.hdf5
+.vscode/*
+ap_sac_compare.py
