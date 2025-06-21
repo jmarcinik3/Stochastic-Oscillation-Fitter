@@ -1595,16 +1595,28 @@ class CrossingPairsBin:
         ax: Axes,
         x: ndarray,
         y: ndarray,
+        marker: str = "o",
         **kwargs,
     ):
         down_inds = np.mean(self.down_pairs, axis=1)
         up_inds = np.mean(self.up_pairs, axis=1)
         inds = np.append(down_inds, up_inds)
-        ax.scatter(
-            self.__interpolate(x, inds),
-            self.__interpolate(y, inds),
-            **kwargs,
-        )
+        inds = inds[inds <= x.size]
+        
+        x_crossings = self.__interpolate(x, inds)
+        y_crossings = self.__interpolate(y, inds)
+        
+        if marker != "|":
+            ax.scatter(
+                x_crossings,
+                y_crossings,
+                marker=marker,
+                **kwargs,
+            )
+            return
+        
+        for x_crossing in x_crossings:
+            ax.axvline(x_crossing, **kwargs)
 
     def plotDownEnterScatter(
         self,
