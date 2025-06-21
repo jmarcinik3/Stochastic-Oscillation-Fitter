@@ -546,6 +546,7 @@ def plotWaveTrace(
     psd_linewidth: float = 0.25,
     psd_peak_linewidth: float = 0.5,
     trace_linewidth: float = 0.25,
+    title_fontsize: str = None,
 ):
     plotter = ComparePlotter(trace)
     ax_trace = axs[0]
@@ -589,7 +590,6 @@ def plotWaveTrace(
         color=linecolor,
         marker="+",
     )
-    # ax_as.set_aspect("equal")
 
     ##### Plot distributions of position crossing #####
     plotter.plotCrossingDistribution2D(
@@ -610,15 +610,26 @@ def plotWaveTrace(
         if len(handles) >= 1:
             ax_psd.legend()
 
-        ax_psd.set_title(r"$S_{xx}\{x\}(f)$")
-        ax_as.set_title(r"$\rho_a (x, \mathcal{H}\{x\})$")
-        ax_crossing.set_title(r"$\vartheta\{x\} (\gamma, \Delta{t})$")
+        ax_psd.set_title(
+            r"$S_{xx}(f)$",
+            fontsize=title_fontsize,
+        )
+        ax_as.set_title(
+            r"$\rho_a (x, \mathcal{H})$",
+            fontsize=title_fontsize,
+        )
+        ax_crossing.set_title(
+            r"$\vartheta(\gamma, \Delta\Theta_\gamma)$",
+            fontsize=title_fontsize,
+        )
 
 
 def generateWaveFigure(
     t: ndarray,
     eta_std: float,
     width_ratios: tuple = (2, 1, 1, 1),
+    title_fontsize: str = None,
+    figsize: tuple[float, float] = None,
 ):
     def setAxisLimits(
         axs: list[Axes],
@@ -663,8 +674,8 @@ def generateWaveFigure(
     fig, axss = plt.subplots(
         nrows=wave_count,
         ncols=ncols,
-        figsize=(7, wave_count),
         width_ratios=width_ratios,
+        figsize=figsize,
     )
     axss: list[list[Axes]]
 
@@ -675,12 +686,13 @@ def generateWaveFigure(
         title = trace_names[wave_index]
         include_labels = wave_index == 0
 
-        axs[0].set_title(title)
+        axs[0].set_title(title, fontsize=title_fontsize)
         plotWaveTrace(
             axs,
             trace,
             include_peak_frequency=False,
             include_labels=include_labels,
+            title_fontsize=title_fontsize,
         )
         setAxisLimits(axs, ymax=ymax)
 
@@ -697,13 +709,18 @@ def generateWaveFigure(
     #     labels=(r"$10^{-2}$", "", r"$10^0$", "", r"$10^2$"),
     # )
 
+    scalebar_kwargs = {
+        "fontsize": title_fontsize,
+        "horizontal_padding": 0.04,
+        "linewidth": 1,
+    }
     plotScalebar(
         ax_trace_sine,
         (0, 0),
         1,
         1,
         (r"$T$", r"$A$"),
-        horizontal_padding=0.04,
+        **scalebar_kwargs,
     )
     plotScalebar(
         ax_as_sine,
@@ -711,7 +728,7 @@ def generateWaveFigure(
         1,
         1,
         (r"$A$", r"$A$"),
-        horizontal_padding=0.04,
+        **scalebar_kwargs,
     )
     plotScalebar(
         ax_crossing_sine,
@@ -719,7 +736,7 @@ def generateWaveFigure(
         0.5,
         1,
         (r"$T/2$", r"$A$"),
-        horizontal_padding=0.04,
+        **scalebar_kwargs,
     )
 
     ##### Set shared axes #####
@@ -740,16 +757,20 @@ if __name__ == "__main__":
     plt.rcParams["text.latex.preamble"] = r"\usepackage{lmodern}"
     plt.rcParams["font.family"] = "lmodern"
 
-    """
     fig = generateWaveFigure(
         t=np.linspace(0, 1000, int(1e6)),
         eta_std=0.25,
+        title_fontsize="medium",
+        figsize=(3.375, 0.75 * 3),
     )
     fig.tight_layout(pad=0)
+    fig.subplots_adjust(
+        top=0.91,
+        right=0.99,
+    )
     plt.show()
-    """
 
-    if True:
+    if False:
         cell_indices = list(range(9))  # [0, 1, 2]  # , 6]
         cc_matrices: list[CcMatrix] = CcMatrices.fromHdf5(
             r"cc_sac/dm-4psd.hdf5",
