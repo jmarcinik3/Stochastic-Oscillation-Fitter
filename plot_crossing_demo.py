@@ -27,11 +27,13 @@ def imageFromFigure(fig: Figure):
 
 class CrossingPlotter:
     horizontal_padding = 0.04
+    axis_label_position = 2 / 3
 
     def __init__(
         self,
         data: Trace,
         tlim: tuple[float, float] = (None, None),
+        period_count: float = 12,
     ):
         self.data = data
         self.tlim = tlim
@@ -45,6 +47,7 @@ class CrossingPlotter:
         self.__max_density = np.max(
             [distr._pdf_matrix.max() for distr in self.crossing_distributions]
         )
+        self.__period_count = period_count
 
     @property
     def trace_span(self):
@@ -67,13 +70,23 @@ class CrossingPlotter:
         x_edges = self.crossing_distribution_2d.x_bin_edges[index : index + 2]
         return np.mean(x_edges)
 
-    def plotCrossings(self, ax: Axes, index: int, **kwargs):
+    def plotCrossings(
+        self,
+        ax: Axes,
+        index: int,
+        **kwargs,
+    ):
         crossing_distribution = self.crossing_distributions[index]
         x_crossing = self.getCrossingLine(index)
         t = self.data.t
+
+        period_count = self.__period_count
+        trace_period = self.trace_period
+        tmax = period_count * trace_period
+
         crossing_distribution.plotScatter(
             ax,
-            t,
+            t[t < tmax * 1.01],
             x_crossing,
             **kwargs,
         )
@@ -130,12 +143,15 @@ class CrossingPlotter:
         )
 
     def plotTrace(self, ax: Axes, **kwargs):
+        period_count = self.__period_count
         ymin, ymax = self.trace_span
         trace_period = self.trace_period
-        trace = self.data.betweenTimes(0, 12 * trace_period)
+
+        tmax = period_count * trace_period
+        trace = self.data.betweenTimes(0, tmax * 1.01)
 
         trace.plotTrace(ax, **kwargs)
-        ax.set_xlim(0, 12 * trace_period)
+        ax.set_xlim(0, tmax)
         ax.set_ylim(ymin, ymax)
         hideAxis(ax)
 
@@ -151,7 +167,55 @@ class CrossingPlotter:
             linewidth=2,
         )
 
-        # ax.set_title(r"$x(t)$")
+        ax.set_xlabel(r"$t$")
+        ax.set_ylabel(r"$x$")
+        ax.yaxis.get_label().set_position((None, CrossingPlotter.axis_label_position))
+
+    def plotCrossingDistributions1D(
+        self,
+        ax: Axes,
+        crossing_indices: tuple[int, ...],
+        colors: tuple[str, ...] = "black",
+        include_label: bool = True,
+        alpha: float = 0.95,
+        **kwargs,
+    ):
+
+        label = include_label
+        for index, crossing_index in enumerate(crossing_indices):
+            color = colors[index]
+            alpha0 = 1.0 if index == 0 else alpha
+            if include_label:
+                label = f"$\\gamma=\\gamma_{index:d}$"
+
+            self.plotCrossingDistribution1D(
+                ax,
+                crossing_index,
+                include_label=label,
+                color=color,
+                alpha=alpha0,
+                **kwargs,
+            )
+
+        trace_period = self.trace_period
+        ax.set_xlim(0, trace_period)
+        ax.set_ylim(None, self.__max_density)
+        hideAxis(ax)
+
+        t_scale = 0.5 * self.trace_period
+        plotScalebar(
+            ax,
+            (0, 0),
+            t_scale,
+            0,
+            labels=(f"{t_scale:.0f}ms", ""),
+            vertical_padding=-20,
+            linewidth=2,
+        )
+
+        ax.set_xlabel(r"$\Delta{t}$")
+        ax.xaxis.get_label().set_position((CrossingPlotter.axis_label_position, None))
+        ax.set_ylabel(r"$\Delta\Theta_\gamma\{x\}$")
 
     def plotCrossingDistribution1D(
         self,
@@ -161,9 +225,19 @@ class CrossingPlotter:
         include_label: bool = True,
         **kwargs,
     ):
+        crossing_distribution = self.crossing_distributions[index]
+        crossing_distribution.plotStairsPdf(
+            ax,
+            color=color,
+            **kwargs,
+        )
+
         if include_label:
-            x_crossing = self.getCrossingLine(index)
-            label = f"$\\gamma={x_crossing:.0f}$nm"
+            label = include_label
+            if isinstance(include_label, bool):
+                x_crossing = self.getCrossingLine(index)
+                label = f"$\\gamma={x_crossing:.0f}$nm"
+
             ax.annotate(
                 label,
                 (0, 0),
@@ -172,30 +246,22 @@ class CrossingPlotter:
                 color=color,
             )
 
-        crossing_distribution = self.crossing_distributions[index]
-        crossing_distribution.plotStairsPdf(
-            ax,
-            label=label,
-            color=color,
-            **kwargs,
-        )
-
         trace_period = self.trace_period
         ax.set_xlim(0, trace_period)
         ax.set_ylim(None, self.__max_density)
         hideAxis(ax)
 
         ax.set_xlabel(r"$\Delta{t}$")
+        ax.xaxis.get_label().set_position((CrossingPlotter.axis_label_position, None))
         ax.set_ylabel(r"$\Delta\Theta_\gamma\{x\}$")
-        # ax.set_title(r"$\Delta\Theta_\gamma\{x\}(\Delta{t})$")
 
     def plotCrossingLine(self, ax: Axes, index: int, **kwargs):
         x_crossing = self.getCrossingLine(index)
         ax.axhline(x_crossing, **kwargs)
 
     def plotCrossingDistribution2D(self, ax: Axes, **kwargs):
-        crossing_distribution_2d = self.crossing_distribution_2d
-        heatmap = crossing_distribution_2d.swapAxes().plotPdfHeatmap(ax, **kwargs)
+        crossing_2d = self.crossing_distribution_2d.swapAxes().normalizeByMax()
+        heatmap = crossing_2d.plotPdfHeatmap(ax, **kwargs)
 
         ymin, ymax = self.trace_span
         trace_period = self.trace_period
@@ -214,7 +280,11 @@ class CrossingPlotter:
         )
 
         fig = ax.get_figure()
-        cbar = fig.colorbar(heatmap, ax=ax)
+        cbar = fig.colorbar(
+            heatmap,
+            ax=ax,
+            pad=0,
+        )
         cbar.set_ticks(())
         cbar.set_label(
             r"$\vartheta \{x\} \left( \gamma, \Delta{t} \right)$",
@@ -223,9 +293,9 @@ class CrossingPlotter:
         )
 
         ax.set_xlabel(r"$\Delta{t}$")
-        ax.xaxis.get_label().set_position((0.75, None))
+        ax.xaxis.get_label().set_position((CrossingPlotter.axis_label_position, None))
         ax.set_ylabel(r"$\gamma$")
-        ax.yaxis.get_label().set_position((None, 0.75))
+        ax.yaxis.get_label().set_position((None, CrossingPlotter.axis_label_position))
 
 
 def generateCrossingAnimation(
@@ -301,17 +371,26 @@ def generateCrossingFigure(
     crossing_percentiles = np.array([0.25, 0.5])
     crossing_indices = np.int64(np.round(crossing_percentiles * (distr_count + 1))) - 1
 
+    crossing_count = len(crossing_indices)
+    y_crossings = np.array(list(map(plotter.getCrossingLine, crossing_indices)))
+
     fig = plt.figure(**kwargs)
-    gs = gridspec.GridSpec(
-        nrows=2,
-        ncols=2,
-        figure=fig,
-        hspace=0.0,
-        wspace=0.0,
+    gs = fig.add_gridspec(
+        2,
+        1,
+        hspace=0,
+        wspace=0,
+    )
+    gs_distr = gridspec.GridSpecFromSubplotSpec(
+        1,
+        2,
+        subplot_spec=gs[1],
+        hspace=0,
+        wspace=-50,
     )
 
     ##### Plot trace #####
-    ax_trace = fig.add_subplot(gs[0, :])
+    ax_trace = fig.add_subplot(gs[0])
     plotter.plotTrace(
         ax_trace,
         color="black",
@@ -339,27 +418,36 @@ def generateCrossingFigure(
                 zorder=0,
             )
 
+        crossing_labels = [f"$\\gamma_{index:d}$" for index in range(crossing_count)]
+        ax_trace.set_yticks(y_crossings, labels=crossing_labels)
+        ax_trace.tick_params(
+            left=False,
+            right=True,
+            labelleft=False,
+            labelright=True,
+            length=0,
+        )
+        for index, ytick in enumerate(ax_trace.get_yticklabels()):
+            crossing_color = crossing_colors[index]
+            ytick.set_color(crossing_color)
+
     ##### Plot 1D distributions #####
     if include_1d:
-        ax_distrs_1d = fig.add_subplot(gs[1, 0])
-        for index, crossing_index in enumerate(crossing_indices):
-            crossing_color = crossing_colors[index]
-            alpha = 1.0 if index == 0 else 0.95
-            plotter.plotCrossingDistribution1D(
-                ax_distrs_1d,
-                crossing_index,
-                fill=True,
-                color=crossing_color,
-                alpha=alpha,
-            )
+        ax_distrs_1d = fig.add_subplot(gs_distr[0])
+        plotter.plotCrossingDistributions1D(
+            ax_distrs_1d,
+            crossing_indices,
+            colors=crossing_colors,
+            fill=True,
+        )
 
     ##### Plot 2D distribution #####
     if include_2d:
         assert include_1d
         ax_distr_2d = fig.add_subplot(
-            gs[1, 1],
+            gs_distr[1],
             sharex=ax_distrs_1d,
-            sharey=ax_trace,
+            # sharey=ax_trace,
         )
 
         plotter.plotCrossingDistribution2D(
@@ -367,8 +455,8 @@ def generateCrossingFigure(
             cmap="Greys",
             zorder=0,
         )
-        for index, crossing_index in enumerate(crossing_indices):
-            if include_crossings:
+        if include_crossings:
+            for index, crossing_index in enumerate(crossing_indices):
                 crossing_color = crossing_colors[index]
                 plotter.plotCrossingLine(
                     ax_distr_2d,
@@ -383,6 +471,13 @@ def generateCrossingFigure(
 
 
 if __name__ == "__main__":
+    np.set_printoptions(precision=3)
+    plt.rcParams["text.usetex"] = True
+    plt.rcParams["text.latex.preamble"] = (
+        r"\usepackage{amsmath}" r"\usepackage{lmodern}"
+    )
+    plt.rcParams["font.family"] = "lmodern"
+
     data = Trace.fromCsv("traces_sac/cell0.csv")
     crossing_plotter = CrossingPlotter(data.rescale(t_amp=1e3))
     fig = generateCrossingFigure(
@@ -396,11 +491,12 @@ if __name__ == "__main__":
         layout="constrained",
     )
 
-    # % start: automatic generated code from pylustrator
+    # # % start: automatic generated code from pylustrator
     crossing_texts = fig.axes[1].texts
     crossing_texts[0].set(position=(0.0847, 0.8433))
     crossing_texts[1].set(position=(0.4781, 0.6035))
-    # % end: automatic generated code from pylustrator
+    crossing_texts[2].set(position=(10.64, -98.97))
+    # # % end: automatic generated code from pylustrator
 
     plt.show()
 
