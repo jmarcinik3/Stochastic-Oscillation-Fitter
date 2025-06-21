@@ -23,7 +23,7 @@ class LuminanceBounds:
         color_min = np.array([red_min, green_min, blue_min])
         return color_min
 
-    def minimumChannel(luminance: float, channel: str):
+    def minimumChannel(luminance: float, channel: int):
         red_weight, green_weight, blue_weight = Luminance.weights
 
         if channel == 0:  # red
@@ -65,13 +65,16 @@ class Luminance:
             error = np.abs(luminance_guess - target_luminance)
             return error
 
-        low_color = LuminanceBounds.minimumColor(target_luminance)
-        high_color = LuminanceBounds.maximumColor(target_luminance)
+        low_channels = LuminanceBounds.minimumColor(target_luminance)
+        high_channels = LuminanceBounds.maximumColor(target_luminance)
 
-        initial_color = np.random.uniform(low_color, high_color, 3)
-        bounds = list(zip(low_color, high_color))
+        initial_color = np.random.uniform(low_channels, high_channels, 3)
+        bounds = list(zip(low_channels, high_channels))
         color_root = optimize.minimize(
-            luminanceError, initial_color, bounds=bounds, method="SLSQP"
+            luminanceError,
+            initial_color,
+            bounds=bounds,
+            method="SLSQP",
         )
         color = color_root.x
         return color
