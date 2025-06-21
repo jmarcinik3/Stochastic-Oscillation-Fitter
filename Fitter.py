@@ -1030,12 +1030,20 @@ class Distribution(rv_continuous):
             **kwargs,
         )
 
+    def plotLinePdf(self, ax: Axes, **kwargs):
+        return ax.plot(
+            self.bin_centers,
+            self._pdf_matrix,
+            **kwargs,
+        )
+
     def plotLineCdf(self, ax: Axes, **kwargs):
         return ax.plot(
             self.bin_centers,
             self._cdf_matrix,
             **kwargs,
         )
+
 
 class Distributions(ndarray):
     @classmethod
