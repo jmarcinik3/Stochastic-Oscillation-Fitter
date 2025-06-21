@@ -235,12 +235,24 @@ class DifferentialEvolutionParser:
         nits = dataset["nits"][:]
         populations = dataset["populations"][:, :, :]
         populations_energies = dataset["populations_energies"][:, :]
+
+        kwargs = {}
+        try:
+            kwargs["bounds"] = dataset.attrs["bounds"]
+            ds_model = dataset["model"]
+            kwargs["parameter_names"] = ds_model.attrs["parameter_name"]
+            kwargs["variable_names"] = ds_model.attrs["variable_name"]
+            kwargs["noise_count"] = ds_model.attrs["noise_count"]
+        except KeyError:
+            pass
+
         return DifferentialEvolutionParser(
             convergences=convergences,
             nfevs=nfevs,
             nits=nits,
             populations=populations,
             populations_energies=populations_energies,
+            **kwargs,
         )
 
     @classmethod
@@ -374,6 +386,10 @@ class DifferentialEvolutionParser:
         nits: ndarray = None,
         populations: ndarray = None,
         populations_energies: ndarray = None,
+        parameter_names: tuple[str] = None,
+        variable_names: tuple[str] = None,
+        noise_count: int = None,
+        bounds: ndarray = None,
     ):
         """
         convergences (number of iterations,)
@@ -397,6 +413,18 @@ class DifferentialEvolutionParser:
         self.populations = populations
         self.populations_energies = populations_energies
         self.population_size = populations.shape[-1]
+
+        self.parameter_names = parameter_names
+        self.variable_names = variable_names
+        self.noise_count = noise_count
+        self.parameter_bounds = bounds
+
+    @property
+    def noise_names(self):
+        noise_count = self.noise_count
+        variable_names = self.variable_names[:noise_count]
+        noise_names = ["n" + variable_name[1:] for variable_name in variable_names]
+        return tuple(noise_names)
 
     def __len__(self):
         nits = self.nits
