@@ -12,6 +12,7 @@ def plotScalebar(
     linewidth: float = 2,
     horizontal_padding: float = 0,
     vertical_padding: float = 0,
+    **kwargs,
 ):
     time_label, position_label = labels
     time_relative, position_relative = position
@@ -33,10 +34,12 @@ def plotScalebar(
     scalebar_2d.addHorizontalLabel(
         time_label,
         padding=horizontal_padding,
+        **kwargs,
     )
     scalebar_2d.addVerticalLabel(
         position_label,
         padding=vertical_padding,
+        **kwargs,
     )
     scalebar_2d.addPatch(
         clip_on=False,
