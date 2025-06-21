@@ -58,13 +58,17 @@ def plotComparisonGrid(
     dm_color: str = "gray",
     d_label: str = "Data",
     m_label: str = "Model",
+    label_fontsize: str = None,
+    legend_fontsize: str = None,
+    tick_fontsize: str = None,
+    alpha: float = 0.5,
 ):
     for row_index in range(axs.shape[0]):
         cc_d.plot(
             axs[row_index, :],
             fill=True,
             color=d_color,
-            alpha=0.833,
+            alpha=1,
             zorder=0,
         )
 
@@ -72,7 +76,7 @@ def plotComparisonGrid(
         axs,
         fill=True,
         color=dm_color,
-        alpha=0.833,
+        alpha=alpha,
         zorder=1,
     )
 
@@ -80,6 +84,7 @@ def plotComparisonGrid(
         ax: Axes
         ax.set_xlim((0, 1))
         hideAxis(ax, hide_bottom=False)
+        ax.patch.set_alpha(0)
 
     ax: Axes = axs[0, 0]
     fig = ax.get_figure()
@@ -87,33 +92,41 @@ def plotComparisonGrid(
     ax_bottom_left: Axes = axs[-1, 0]
     ax_bottom_left.xaxis.set_minor_locator(ticker.MultipleLocator(0.25))
     ax_bottom_left.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+    ax_bottom_left.spines["bottom"].set_visible(True)
     ax_bottom_left.spines["left"].set_visible(True)
     fig.text(
         0.1,
         0.1,
-        r"$\chi\{x,x\}$",
-        # xy=(0.617, 0.647),
-        # xycoords="axes fraction",
+        r"$x$",
         ha="left",
         va="top",
-        fontsize="x-small",
+        fontsize=legend_fontsize,
         color=d_color,
         clip_on=False,
     )
     fig.text(
         0.1,
         0.1,
-        r"$\chi\{x,y\}$",
-        # xy=(0.546, 0.889),
-        # xycoords="figure fraction",
+        r"$y$",
         ha="left",
         va="top",
-        fontsize="x-small",
+        fontsize=legend_fontsize,
         color=dm_color,
         clip_on=False,
     )
-    ax_bottom_left.set_xlabel(r"$\hat{C}$")
-    ax_bottom_left.set_ylabel(r"$\chi\{x,\_\}$")
+    ax_bottom_left.set_ylabel(
+        r"$\chi\{x,\_\}$",
+        fontsize=label_fontsize,
+    )
+
+    ax_bottom_left.set_xticks((0, 1))
+    ax_bottom_left.set_xticks(
+        (0, 0.5, 1),
+        minor=True,
+        labels=("", r"$\hat{C}$", ""),
+        fontsize=label_fontsize,
+    )
+    ax_bottom_left.tick_params(labelsize=tick_fontsize)
 
     ax_middle_left: Axes = axs[cc_dm.shape[0] // 2, 0]
     ax_middle_left.set_ylabel(m_label + r" $y$")
@@ -1617,6 +1630,8 @@ if __name__ == "__main__":
 
     # Generate grid of plots to compare cross-correlation distributions
     if True:
+        # import pylustrator
+        # pylustrator.start()
         cc_distr_container = DistributionQuadrant.fromHdf5("cc_sac/dist-4T_50bins.hdf5")
         cc_dd = cc_distr_container.data_data
         cc_dm = cc_distr_container.data_model
@@ -1624,22 +1639,33 @@ if __name__ == "__main__":
 
         fig, axs = plt.subplots(
             *cc_dm.shape,
-            figsize=(5.25, 5.25),
-            layout="constrained",
+            figsize=(3.375, 3.375),
         )
+
         plotComparisonGrid(
             axs,
             cc_d,
             cc_dm,
-            dm_color=Luminance.addUntilLuminance(0.25, "blue", "green"),
+            dm_color=Luminance.addUntilLuminance(0.833, "black", "white"),
+            alpha=0.833,
             d_label="Measurement",
             m_label="Simulation",
+            legend_fontsize="x-small",
+            label_fontsize="x-small",
+            tick_fontsize="x-small",
         )
+        fig.tight_layout(
+            pad=0.12,
+            h_pad=0,
+            w_pad=0,
+        )
+
         # % start: automatic generated code from pylustrator
         texts = fig.texts
-        texts[0].set(position=(0.0925, 0.1501))
-        texts[1].set(position=(0.0833, 0.1728))
+        texts[0].set(position=(0.1167, 0.1267))
+        texts[1].set(position=(0.1026, 0.1536))
         # % end: automatic generated code from pylustrator
+
         plt.show()
 
     # Generate plot to show JSD matrices
