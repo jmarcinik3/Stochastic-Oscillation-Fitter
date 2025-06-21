@@ -32,19 +32,24 @@ def generateComparisonFigure(
     triangle_hdf5 = TriangleHdf5(hdf5_filepath)
 
     fig = plt.figure(**kwargs)
-    gs_rows = fig.add_gridspec(2, 1)
-    gs_top = gridspec.GridSpecFromSubplotSpec(
+    gs_rows = fig.add_gridspec(
         1,
         2,
-        subplot_spec=gs_rows[0],
         hspace=0,
         wspace=0,
     )
-    gs_bottom = gridspec.GridSpecFromSubplotSpec(
+    gs_top = gridspec.GridSpecFromSubplotSpec(
+        2,
         1,
+        subplot_spec=gs_rows[0],
+        hspace=0.25,
+        wspace=0,
+    )
+    gs_bottom = gridspec.GridSpecFromSubplotSpec(
         3,
+        1,
         subplot_spec=gs_rows[1],
-        hspace=0,
+        hspace=0.125,
         wspace=0,
     )
     axs: list[Axes] = []
@@ -72,13 +77,16 @@ def generateComparisonFigure(
         )
 
         triangle_hdf5.formatAxis(ax, index)
-        ax.set_title(name)
+        ax.set_title(
+            name,
+            y=1,
+            pad=0,
+            verticalalignment="top",
+        )
 
     ax_top_left = axs[0]
     ax_top_left.set_xlabel("Actual")
     ax_top_left.set_ylabel("Fit")
-
-    fig.suptitle("Triangle Wave")
     return fig
 
 
@@ -434,7 +442,7 @@ class TriangleHdf5:
     def fit_widths(self):
         widths = np.zeros(len(self))
         for index, de_parser in enumerate(self.de_parsers):
-            width = de_parser.population(-1, 0, 0)
+            width = de_parser.population(-1, 0, 0)[0]
             widths[index] = width
         return widths
 
@@ -442,7 +450,7 @@ class TriangleHdf5:
     def fit_noises(self):
         noises = np.zeros(len(self))
         for index, de_parser in enumerate(self.de_parsers):
-            noise = de_parser.population(-1, 0, 1)
+            noise = de_parser.population(-1, 0, 1)[0]
             noises[index] = noise
         return noises
 
