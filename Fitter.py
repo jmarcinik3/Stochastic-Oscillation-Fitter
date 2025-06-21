@@ -445,18 +445,58 @@ class DifferentialEvolutionParser:
 
     def population(
         self,
-        iteration_index: int = None,
-        population_index: int = None,
-        parameter_index: int = None,
+        iteration_index: Union[int, ndarray] = None,
+        population_index: Union[int, ndarray] = None,
+        parameter_index: Union[int, ndarray] = None,
     ):
         populations = self.populations
-        if iteration_index is None:
-            iteration_index = slice(populations.shape[0])
-        if population_index is None:
-            population_index = slice(populations.shape[1])
-        if parameter_index is None:
-            parameter_index = slice(populations.shape[2])
-        return populations[iteration_index, population_index, parameter_index]
+
+        if isinstance(iteration_index, int):
+            iteration_index = np.array([iteration_index])
+        elif iteration_index is None:
+            iteration_index: ndarray = np.arange(populations.shape[0])
+        else:
+            iteration_index = np.array(iteration_index)
+
+        if isinstance(population_index, int):
+            population_index = np.array([population_index])
+        elif population_index is None:
+            population_index = np.arange(populations.shape[1])
+        else:
+            population_index = np.array(population_index)
+
+        if isinstance(parameter_index, int):
+            parameter_index = np.array([parameter_index])
+        elif parameter_index is None:
+            parameter_index: ndarray = np.arange(populations.shape[2])
+        else:
+            parameter_index = np.array(parameter_index)
+
+        assert (
+            iteration_index.ndim == 1
+            and population_index.ndim == 1
+            and parameter_index.ndim == 1
+        )
+
+        same_sizes = (
+            iteration_index.size == population_index.size == parameter_index.size
+        )
+        if not same_sizes:
+            (
+                iteration_index,
+                population_index,
+                parameter_index,
+            ) = np.meshgrid(
+                iteration_index,
+                population_index,
+                parameter_index,
+                indexing="ij",
+            )
+
+        population: ndarray = populations[
+            iteration_index, population_index, parameter_index
+        ]
+        return population
 
     def population_energies(
         self,
