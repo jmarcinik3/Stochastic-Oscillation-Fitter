@@ -619,7 +619,7 @@ def plotWaveTrace(
             fontsize=title_fontsize,
         )
         ax_crossing.set_title(
-            r"$\vartheta(\gamma, \Delta\Theta_\gamma)$",
+            r"$\vartheta(\gamma, \Delta{t})$",
             fontsize=title_fontsize,
         )
 
@@ -721,6 +721,17 @@ def generateWaveFigure(
         1,
         (r"$T$", r"$A$"),
         **scalebar_kwargs,
+    )
+    plotScalebar(
+        ax_psd_sine,
+        (0, 0),
+        1,
+        0,
+        (r"$1/T$", ""),
+        fontsize=title_fontsize,
+        linewidth=1,
+        horizontal_padding=0.04,
+        ha="right",
     )
     plotScalebar(
         ax_as_sine,
