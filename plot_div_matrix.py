@@ -17,7 +17,7 @@ def generateColorbar(
     )
     cbar.set_ticks(
         (0, 0.5, 1),
-        labels=("0.0", "0.5", "1.0"),
+        labels=("0", "", "1"),
     )
     cbar.set_ticks(
         np.linspace(0, 1, 11),
@@ -26,8 +26,10 @@ def generateColorbar(
     cbar.set_label(
         label,
         rotation=270,
-        labelpad=12,
+        labelpad=4,
     )
+
+    return cbar
 
 
 def plotRow(
@@ -63,12 +65,40 @@ def plotRow(
     )
 
     if include_labels:
-        ax_dd.set_xlabel("Measurement", fontsize="x-small")
-        ax_dd.set_ylabel("Measurement", fontsize="x-small")
-        ax_dm.set_xlabel("Measurement", fontsize="x-small")
-        ax_dm.set_ylabel("Simulation", fontsize="x-small")
-        ax_mm.set_xlabel("Simulation", fontsize="x-small")
-        ax_mm.set_ylabel("Simulation", fontsize="x-small")
+        fontsize = "x-small"
+        x_labelpad = 3
+        y_labelpad = 1.5
+
+        ax_dd.set_xlabel(
+            "Measurement",
+            fontsize=fontsize,
+            labelpad=x_labelpad,
+        )
+        ax_dd.set_ylabel(
+            "Measurement",
+            fontsize=fontsize,
+            labelpad=y_labelpad,
+        )
+        ax_dm.set_xlabel(
+            "Measurement",
+            fontsize=fontsize,
+            labelpad=x_labelpad,
+        )
+        ax_dm.set_ylabel(
+            "Simulation",
+            fontsize=fontsize,
+            labelpad=y_labelpad,
+        )
+        ax_mm.set_xlabel(
+            "Simulation",
+            fontsize=fontsize,
+            labelpad=x_labelpad,
+        )
+        ax_mm.set_ylabel(
+            "Simulation",
+            fontsize=fontsize,
+            labelpad=y_labelpad,
+        )
 
 
 if __name__ == "__main__":
@@ -107,9 +137,8 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(
         nrows=3,
         ncols=4,
-        figsize=(3.375, 3.375 * 10 / 12),
+        figsize=(3.375, 3.375 * 8 / 9),
         width_ratios=(1, 1, 1, 1 / 12),
-        layout="tight",
     )
 
     plotRow(
@@ -118,6 +147,7 @@ if __name__ == "__main__":
         cbar_label=r"$d_{JS}$",
         norm=norm,
         cmap=cmap,
+        include_labels=True,
     )
     plotRow(
         axs[1, :],
@@ -135,8 +165,18 @@ if __name__ == "__main__":
         cmap=cmap,
         include_labels=False,
     )
-    
-    fig.subplots_adjust(left=0, right=1, wspace=0)
-    fig.savefig("temp.pdf")
+
+    fig.tight_layout(
+        h_pad=0.5,
+        w_pad=0.5,
+    )
+    fig.subplots_adjust(
+        left=0.01,
+        right=0.93,
+        bottom=0.02,
+        top=0.98,
+        wspace=0,
+    )
+    # fig.savefig("temp.pdf")
 
     plt.show()
