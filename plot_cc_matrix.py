@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pylustrator
 
 import copy
 import io
@@ -11,7 +12,7 @@ from matplotlib.figure import Figure
 from typing import Callable, Iterable, Union
 import h5py
 
-from matplotlib import colors, cm, gridspec, pyplot as plt, ticker
+from matplotlib import colors, cm, pyplot as plt, ticker
 import numpy as np
 from numpy import ndarray
 from pypdf import PageObject, PdfReader, PdfWriter
@@ -151,24 +152,176 @@ def plotComparisonTrace(
     trace_count = len(percentiles)
     assert len(trace_colors) == trace_count
 
-    gs = gridspec.GridSpec(
-        1,
+    gs = fig.add_gridspec(
         2,
-        fig,
-        width_ratios=(2, 1),
-        hspace=0.0,
-        wspace=0.0,
+        1,
+        height_ratios=(trace_count, 1),
+        hspace=0.1,
+        wspace=0,
     )
-    gs_left = gs[0].subgridspec(
+    gs_trace = gs[0].subgridspec(
         trace_count,
         1,
-        hspace=0.0,
+        hspace=0,
     )
-    gs_right = gs[1].subgridspec(
-        2,
+    gs_cc = gs[-1].subgridspec(
         1,
-        hspace=0.0,
+        2,
+        width_ratios=(3, 2),
+        wspace=0,
     )
+
+    ax_traces = [fig.add_subplot(gs_trace[i]) for i in range(trace_count)]
+    ax_corr = fig.add_subplot(gs_cc[0])
+    ax_distr = fig.add_subplot(gs_cc[1])
+
+    cc_args = np.array(list(map(cc_matrix.argpercentile, percentiles)))
+    cc_values = cc_matrix.matrix[*cc_args.T]
+
+    data = cc_matrix.data
+    model = cc_matrix.model
+    trace_ylim = (
+        min(data.x.min(), model.x.min()),
+        max(data.x.max(), model.x.max()),
+    )
+
+    ##### Plot cross-correlation matrix #####
+    cc_matrix.plotMatrix(
+        ax_corr,
+        cmap="Greys",
+        vmin=0,
+        vmax=1,
+        max_length=max_matrix_length,
+    )
+    hideAxis(ax_corr)
+    if equal_matrix_aspect:
+        ax_corr.set_aspect("equal")
+
+    if include_colorbar:
+        mappable = cm.ScalarMappable(
+            norm=colors.Normalize(0, 1),
+            cmap="Greys",
+        )
+        fig.colorbar(mappable, ax=ax_corr)
+
+    ax_corr.invert_yaxis()
+    ax_corr.set_xlabel(r"Model $m$ $\rightarrow$")
+    ax_corr.set_ylabel(r"$\leftarrow$ Data $n$")
+
+    ##### Plot cross-correlation distribution #####
+    cc_distr = cc_matrix.toDistribution(bins=np.linspace(0, 1, 51))
+    cc_distr.plotStairsPdf(
+        ax_distr,
+        fill=True,
+        color="black",
+    )
+    hideAxis(ax_distr)
+    ax_distr.spines["bottom"].set_visible(True)
+
+    ax_distr.set_xlim((0, 1))
+    ax_distr.set_xticks((0, 0.5, 1), labels=("0", r"$\hat{C}_{nm}$", "1"))
+    ax_distr.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+    ax_distr.set_ylabel(
+        r"$\chi\{x,y\}$",
+        ha="center",
+        va="top",
+    )
+    ax_distr.set_facecolor("none")
+
+    ##### Plot model traces #####
+    data_kwargs = {
+        "color": "black",
+        "linewidth": trace_linewidth,
+    }
+    model_kwargs = {
+        "color": None,
+        "linewidth": trace_linewidth,
+    }
+    for trace_index in range(trace_count):
+        ax_trace = ax_traces[trace_index]
+        color = trace_colors[trace_index]
+        cc_arg = cc_args[trace_index]
+        percentile = percentiles[trace_index]
+
+        model_kwargs["color"] = color
+
+        cc_matrix.plotSection(
+            ax_trace,
+            *cc_arg,
+            data_kwargs=data_kwargs,
+            model_kwargs=model_kwargs,
+        )
+        hideAxis(ax_trace)
+
+        plabel = f"{100*percentile:.0f}" + r"$^{\text{th}}$"
+        ax_trace.annotate(
+            plabel,
+            xy=(0.005, 0.5),
+            xycoords="axes fraction",
+            color=color,
+        )
+        ax_trace.set_ylim(trace_ylim)
+        ax_trace.set_facecolor("none")
+
+        if include_cc_dots:
+            ax_corr.scatter(
+                *cc_arg,
+                color=color,
+                s=cc_dot_size,
+                marker="o",
+                clip_on=False,
+            )
+
+        if include_cc_lines:
+            cc_value = cc_values[trace_index]
+            ax_distr.axvline(
+                cc_value,
+                color=color,
+                linestyle="dashed",
+                linewidth=cc_linewidth,
+                label=plabel,
+            )
+
+    ax_trace_top = ax_traces[0]
+    tamp = 0.25 * cc_matrix.chunk_time[0]
+    yamp = 0.5 * np.diff(trace_ylim)[0]
+    plotScalebar(
+        ax_trace_top,
+        (0, 0.05),
+        tamp,
+        yamp,
+        labels=(f"{1000*tamp:.0f}ms", f"{yamp:.0f}nm"),
+        horizontal_padding=0.04,
+        linewidth=2,
+    )
+
+
+def plotComparisonTraceColumn(
+    fig: Figure,
+    cc_matrix: CcMatrix,
+    percentiles: ndarray = (0.5, 1.0),
+    trace_colors: tuple[str] = ("red", "blue"),
+    include_cc_dots: bool = True,
+    include_cc_lines: bool = True,
+    include_colorbar: bool = False,
+    trace_linewidth: float = None,
+    cc_dot_size: float = None,
+    cc_linewidth: float = 2,
+    max_matrix_length: int = 100,
+    equal_matrix_aspect: bool = True,
+):
+    trace_count = len(percentiles)
+    assert len(trace_colors) == trace_count
+
+    gs = fig.add_gridspec(
+        1,
+        2,
+        width_ratios=(3, 2),
+        hspace=0,
+        wspace=0.08,
+    )
+    gs_left = gs[0].subgridspec(trace_count, 1, hspace=0)
+    gs_right = gs[1].subgridspec(2, 1, hspace=0)
 
     ax_traces = [fig.add_subplot(gs_left[i]) for i in range(trace_count)]
     ax_corr = fig.add_subplot(gs_right[0])
@@ -218,11 +371,11 @@ def plotComparisonTrace(
     ax_distr.spines["bottom"].set_visible(True)
 
     ax_distr.set_xlim((0, 1))
-    ax_distr.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+    ax_distr.set_xticks((0, 0.5, 1), labels=("0", "", "1"))
     ax_distr.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-    ax_distr.xaxis.set_major_formatter(ticker.FormatStrFormatter("%.1f"))
     ax_distr.set_xlabel(r"$\hat{C}_{nm}$")
     ax_distr.set_ylabel(r"$\chi\{x,y\}$")
+    ax_distr.set_facecolor("none")
 
     ##### Plot model traces #####
     data_kwargs = {
@@ -257,6 +410,7 @@ def plotComparisonTrace(
             color=color,
         )
         ax_trace.set_ylim(trace_ylim)
+        ax_trace.set_facecolor("none")
 
         if include_cc_dots:
             ax_corr.scatter(
@@ -282,7 +436,7 @@ def plotComparisonTrace(
     yamp = 0.5 * np.diff(trace_ylim)[0]
     plotScalebar(
         ax_trace_top,
-        (0, 0),
+        (0, 0.05),
         tamp,
         yamp,
         labels=(f"{1000*tamp:.0f}ms", f"{yamp:.0f}nm"),
@@ -1554,7 +1708,8 @@ if __name__ == "__main__":
     # 1) compare data and model traces
     # 2) show cross-correlation matrix
     # 3) show distribution of cross-correlations
-    if False:
+    if True:
+        # pylustrator.start()
         cc_matrices = CcMatrices.fromHdf5("cc_sac/dm-4psd.hdf5")
 
         percentiles = (0.5, 0.841345, 0.99)
@@ -1563,10 +1718,7 @@ if __name__ == "__main__":
             Luminance.addUntilLuminance(0.5, "red", "green"),
             Luminance.addUntilLuminance(0.75, (0, 1, 0), "magenta"),
         )
-        fig = plt.figure(
-            figsize=(3.375, 0.666 * 3.375),
-            layout="constrained",
-        )
+        fig = plt.figure(figsize=(3.375, 3.375))
 
         plotComparisonTrace(
             fig,
@@ -1578,12 +1730,19 @@ if __name__ == "__main__":
             cc_dot_size=4,
             max_matrix_length=200,
         )
+        fig.tight_layout()
+        fig.subplots_adjust(
+            bottom=0.1,
+            top=1,
+            left=0.04,
+            right=0.98,
+        )
 
         # % start: automatic generated code from pylustrator
         texts = [fig.axes[i].texts[0] for i in range(len(percentiles))]
-        texts[0].set(position=(0.034, 0.1709))
-        texts[1].set(position=(0.144, 0.7033))
-        texts[2].set(position=(0.0919, 0.4613))
+        texts[0].set(position=(0.0264, 0.3156))
+        texts[1].set(position=(0.2206, 0.3155))
+        texts[2].set(position=(0.1023, 0.4437))
         # % end: automatic generated code from pylustrator
         plt.show()
 
@@ -1629,8 +1788,7 @@ if __name__ == "__main__":
                     cc_distr_container.toHdf5(file)
 
     # Generate grid of plots to compare cross-correlation distributions
-    if True:
-        # import pylustrator
+    if False:
         # pylustrator.start()
         cc_distr_container = DistributionQuadrant.fromHdf5("cc_sac/dist-4T_50bins.hdf5")
         cc_dd = cc_distr_container.data_data
