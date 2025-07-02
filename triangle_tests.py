@@ -35,6 +35,7 @@ def generateComparisonFigure(
     gs_rows = fig.add_gridspec(
         1,
         2,
+        width_ratios=(3, 2),
         hspace=0,
         wspace=0,
     )
@@ -42,14 +43,14 @@ def generateComparisonFigure(
         2,
         1,
         subplot_spec=gs_rows[0],
-        hspace=0.25,
+        hspace=0,
         wspace=0,
     )
     gs_bottom = gridspec.GridSpecFromSubplotSpec(
         3,
         1,
         subplot_spec=gs_rows[1],
-        hspace=0.125,
+        hspace=0,
         wspace=0,
     )
     axs: list[Axes] = []
@@ -651,11 +652,11 @@ if __name__ == "__main__":
         appendRescalingParameters("triangle.hdf5", t=t)
 
     ##### Plot fit vs. actual parameter values from fitted triangle wave simulations #####
-    """
+    
     fig = generateComparisonFigure(
         "triangle.hdf5",
         figsize=(3.375, 3.375),
         layout="constrained",
     )
     plt.show()
-    """
+    
