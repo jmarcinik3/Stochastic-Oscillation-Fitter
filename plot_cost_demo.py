@@ -1,9 +1,7 @@
 from numbers import Number
-from typing import Iterable, Union
-from matplotlib import colors, gridspec, layout_engine, pyplot as plt
+from typing import Iterable
+from matplotlib import cm, colors, gridspec, pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
 import numpy as np
 from numpy import ndarray
 from scipy import signal
@@ -301,6 +299,37 @@ class ComparePlotter:
 
 class TraceCostPlotter:
     @classmethod
+    def bracketTracePair(cls, axss: list[tuple[Axes]], label: str = "Pair"):
+        ax = axss[-1][-1]
+        fig = ax.get_figure()
+
+        ax.annotate(
+            r"$]$",
+            fontsize=128,
+            xy=(1.02, 0.05),
+            xycoords="axes fraction",
+            ha="center",
+            va="bottom",
+        )
+
+        norm = colors.Normalize(vmin=0, vmax=1)
+        cmap = colors.LinearSegmentedColormap.from_list("", ["black", "black"])
+        mappable = cm.ScalarMappable(cmap=cmap, norm=norm)
+        cbar = fig.colorbar(
+            mappable,
+            ax=np.array(axss),
+            fraction=0.001,
+            pad=0,
+            aspect=1,
+        )
+        cbar.set_ticks(())
+        cbar.set_label(
+            label,
+            rotation=270,
+            labelpad=12,
+        )
+
+    @classmethod
     def __getDensitySpan(cls, traces: list[Trace]):
         psds = [trace.toPsd() for trace in traces]
         densities = np.concatenate([psd.densities for psd in psds])
@@ -466,11 +495,12 @@ class TraceCostPlotter:
         ax_trace, _, ax_as, ax_crossing = axs
         plotScalebar(
             ax_trace,
-            (0, 0),
+            (-0.01, 0),
             0.5 * trace_period,
             trace_max,
             (f"{trace_period:.0f}ms", f"{trace_max:.0f}nm"),
             horizontal_padding=0.04,
+            vertical_padding=0.002,
         )
         plotScalebar(
             ax_as,
@@ -498,8 +528,12 @@ class TraceCostPlotter:
         ax_trace, ax_psd, ax_as, ax_crossing = axs
         ax_trace.set_title(r"$x(t)$")
         ax_psd.set_title(r"$\widetilde{S}_{xx}\{x\}(f)$")
-        ax_as.set_title(r"$\rho_a (x, \mathcal{H}\{x\})$")
+        ax_as.set_title(
+            r"$\rho_a (x, \mathcal{H}\{x\})$",
+            y=1.035,
+        )
         ax_crossing.set_title(r"$\vartheta\{x\} (\gamma, \Delta{t})$")
+        axs[0].get_figure().align_titles(axs)
 
     def __formatAxes(
         self,
@@ -611,11 +645,11 @@ def plotWaveTrace(
             ax_psd.legend()
 
         ax_psd.set_title(
-            r"$S_{xx}(f)$",
+            r"$\widetilde{S}_{xx}(f)$",
             fontsize=title_fontsize,
         )
         ax_as.set_title(
-            r"$\rho_a (x, \mathcal{H})$",
+            r"$\rho_a (x, \mathcal{H}\{x\})$",
             fontsize=title_fontsize,
         )
         ax_crossing.set_title(
@@ -768,23 +802,25 @@ if __name__ == "__main__":
     plt.rcParams["text.latex.preamble"] = r"\usepackage{lmodern}"
     plt.rcParams["font.family"] = "lmodern"
 
-    fig = generateWaveFigure(
-        t=np.linspace(0, 1000, int(1e6)),
-        eta_std=0.25,
-        title_fontsize="medium",
-        figsize=(3.375, 0.75 * 3),
-    )
-    fig.tight_layout(pad=0)
-    fig.subplots_adjust(
-        top=0.91,
-        right=0.99,
-    )
-    plt.show()
+    if True:
+        fig = generateWaveFigure(
+            t=np.linspace(0, 1000, int(1e6)),
+            eta_std=0.25,
+            title_fontsize="medium",
+            figsize=(3.375, 0.75 * 3),
+        )
+        fig.tight_layout(pad=0)
+        fig.subplots_adjust(
+            top=0.90,
+            right=0.99,
+        )
+        plt.show()
 
     if False:
-        cell_indices = list(range(9))  # [0, 1, 2]  # , 6]
+        cell_indices = [0, 1, 2]  # , 6
+        cycle_count = 12
         cc_matrices: list[CcMatrix] = CcMatrices.fromHdf5(
-            r"cc_sac/dm-4psd.hdf5",
+            f"cc_sac/dm-{cycle_count:d}psd.hdf5",
             is_diag=True,
         )
 
@@ -796,8 +832,8 @@ if __name__ == "__main__":
         gs = fig.add_gridspec(
             nrows=2 * cell_count,
             hspace=0,
-            left=0.05,
-            right=1,
+            left=0.045,
+            right=0.97,
             bottom=0,
             top=0.95,
         )
@@ -807,11 +843,8 @@ if __name__ == "__main__":
 
         width_ratios = (4, 1, 1, 1)
         linecolors = ["black", blue_color]
-        cmap_colors = ["white", blue_color]
-        cmaps = [
-            "Greys",
-            colors.LinearSegmentedColormap.from_list("", cmap_colors),
-        ]
+        cmap_model = colors.LinearSegmentedColormap.from_list("", ["white", blue_color])
+        cmaps = ["Greys", cmap_model]
 
         for index, cell_index in enumerate(cell_indices):
             cc_matrix = cc_matrices[cell_index]
@@ -841,7 +874,7 @@ if __name__ == "__main__":
 
             axss = plotter.plotOnGridSpec(
                 gs_set,
-                cycle_count=4,
+                cycle_count=cycle_count,
                 psd_linewidth=0.5,
                 psd_peak_linewidth=1,
                 trace_linewidth=1.5,
@@ -851,6 +884,7 @@ if __name__ == "__main__":
                 cmaps=cmaps,
                 t_starts=t_starts,
             )
+            TraceCostPlotter.bracketTracePair(axss, label=f"Cell {cell_index+1:d}")
 
             if index == 0:
                 ax_trace_data = axss[0][0]
