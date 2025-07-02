@@ -486,7 +486,7 @@ if __name__ == "__main__":
         include_1d=True,
         include_2d=True,
         trace_linewidth=2,
-        crossing_linewidth=2,
+        crossing_linewidth=1.5,
         figsize=(3.375, 0.666 * 3.375),
         layout="constrained",
     )
