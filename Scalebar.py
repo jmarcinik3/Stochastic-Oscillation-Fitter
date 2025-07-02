@@ -1,6 +1,7 @@
 from matplotlib import patches
 from matplotlib.axes import Axes
 from matplotlib.path import Path
+import numpy as np
 
 
 def plotScalebar(
@@ -155,38 +156,35 @@ class Scalebar2D:
         label: str,
         location: float = 0.5,
         padding: float = 0.0,
+        ha: str = None,
+        va: str = "center",
         **kwargs,
     ):
         ax = self.axis
         anchor = self.anchor
-
-        x_left = self.left
-        x_right = self.right
         y_lower = self.lower
         y_upper = self.upper
 
-        height = y_upper - y_lower
-        y_location = y_lower + location * height
+        if ha is None:
+            if anchor.isLeft():
+                ha = "right"
+            elif anchor.isRight():
+                ha = "left"
 
-        x_min, x_max = ax.get_xlim()
-        x_range = x_max - x_min
-        x_padding = padding * x_range
+        y_location = y_lower + location * (y_upper - y_lower)
+        x_location = self.__location_x(ax, padding=padding)
 
         if anchor.isLeft():
-            x_location = x_left - x_padding
-            horizontal_alignment = "right"
             rotation = 90
         elif anchor.isRight():
-            x_location = x_right + x_padding
-            horizontal_alignment = "left"
             rotation = 270
 
         text = ax.text(
             x_location,
             y_location,
             label,
-            ha=horizontal_alignment,
-            va="center",
+            ha=ha,
+            va=va,
             rotation=rotation,
             **kwargs,
         )
@@ -197,36 +195,84 @@ class Scalebar2D:
         label: str,
         location: float = 0.5,
         padding: float = 0.0,
+        ha: str = "center",
+        va: str = None,
         **kwargs,
     ):
         ax = self.axis
         anchor = self.anchor
-
         x_left = self.left
         x_right = self.right
-        y_lower = self.lower
-        y_upper = self.upper
 
-        width = x_right - x_left
-        x_location = x_left + location * width
+        if va is None:
+            if anchor.isLower():
+                va = "top"
+            elif anchor.isUpper():
+                va = "bottom"
 
-        y_min, y_max = ax.get_ylim()
-        y_range = y_max - y_min
-        y_padding = padding * y_range
-
-        if anchor.isLower():
-            y_location = y_lower - y_padding
-            vertical_alignment = "top"
-        elif anchor.isUpper():
-            y_location = y_upper + y_padding
-            vertical_alignment = "bottom"
+        x_location = x_left + location * (x_right - x_left)
+        y_location = self.__location_y(ax, padding=padding)
 
         text = ax.text(
             x_location,
             y_location,
             label,
-            ha="center",
-            va=vertical_alignment,
+            ha=ha,
+            va=va,
             **kwargs,
         )
         return text
+
+    def __location_x(
+        self,
+        ax: Axes,
+        padding: float,
+    ):
+        anchor = self.anchor
+        x_left = self.left
+        x_right = self.right
+        x_min, x_max = ax.get_xlim()
+        x_scale = ax.get_xscale()
+
+        if x_scale == "log":
+            x_min, x_max = np.log10([x_min, x_max])
+            x_left = np.log10(x_left)
+            x_right = np.log10(x_right)
+
+        x_padding = padding * (x_max - x_min)
+        if anchor.isLeft():
+            x_location = x_left - x_padding
+        elif anchor.isRight():
+            x_location = x_right + x_padding
+
+        if x_scale == "log":
+            x_location = 10**x_location
+
+        return x_location
+
+    def __location_y(
+        self,
+        ax: Axes,
+        padding: float,
+    ):
+        anchor = self.anchor
+        y_lower = self.lower
+        y_upper = self.upper
+        y_min, y_max = ax.get_ylim()
+        y_scale = ax.get_yscale()
+
+        if y_scale == "log":
+            y_min, y_max = np.log10([y_min, y_max])
+            y_lower = np.log10(y_lower)
+            y_upper = np.log10(y_upper)
+
+        y_padding = padding * (y_max - y_min)
+        if anchor.isLower():
+            y_location = y_lower - y_padding
+        elif anchor.isUpper():
+            y_location = y_upper + y_padding
+
+        if y_scale == "log":
+            y_location = 10**y_location
+
+        return y_location
