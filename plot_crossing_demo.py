@@ -1,4 +1,5 @@
 import io
+import pylustrator
 from tkinter import Image
 from matplotlib import gridspec, pyplot as plt
 from matplotlib.axes import Axes
@@ -167,8 +168,6 @@ class CrossingPlotter:
             linewidth=2,
         )
 
-        ax.set_xlabel(r"$t$")
-        ax.set_ylabel(r"$x$")
         ax.yaxis.get_label().set_position((None, CrossingPlotter.axis_label_position))
 
     def plotCrossingDistributions1D(
@@ -180,13 +179,12 @@ class CrossingPlotter:
         alpha: float = 0.95,
         **kwargs,
     ):
-
         label = include_label
         for index, crossing_index in enumerate(crossing_indices):
             color = colors[index]
             alpha0 = 1.0 if index == 0 else alpha
             if include_label:
-                label = f"$\\gamma=\\gamma_{index:d}$"
+                label = f"$\\gamma_{index:d}$"
 
             self.plotCrossingDistribution1D(
                 ax,
@@ -378,7 +376,7 @@ def generateCrossingFigure(
     gs = fig.add_gridspec(
         2,
         1,
-        hspace=0,
+        hspace=0.05,
         wspace=0,
     )
     gs_distr = gridspec.GridSpecFromSubplotSpec(
@@ -471,6 +469,8 @@ def generateCrossingFigure(
 
 
 if __name__ == "__main__":
+    # pylustrator.start()
+
     np.set_printoptions(precision=3)
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = (
@@ -487,17 +487,20 @@ if __name__ == "__main__":
         include_2d=True,
         trace_linewidth=2,
         crossing_linewidth=1.5,
-        figsize=(3.375, 0.666 * 3.375),
+        figsize=(3.375, 0.75 * 3.375),
         layout="constrained",
     )
 
-    # # % start: automatic generated code from pylustrator
+    fig.text(0.0059, 0.9302, "(a)")
+    fig.text(0.0059, 0.4297, "(b)")
+    fig.text(0.4737, 0.4297, "(c)")
+
+    # % start: automatic generated code from pylustrator
     crossing_texts = fig.axes[1].texts
-    crossing_texts[0].set(position=(0.0847, 0.8433))
+    crossing_texts[0].set(position=(0.0951, 0.8433))
     crossing_texts[1].set(position=(0.4781, 0.6035))
     crossing_texts[2].set(position=(10.64, -98.97))
-    # # % end: automatic generated code from pylustrator
-
+    # % end: automatic generated code from pylustrator
     plt.show()
 
     # generateCrossingAnimation(
