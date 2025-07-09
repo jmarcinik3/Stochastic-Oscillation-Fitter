@@ -7,8 +7,8 @@ force/*
 information_plots/*
 old_traces/*
 package_tests/*
-traces_ap/*
-traces_sac/*
+traces_ap/fit*
+traces_sac/fit*
 triangle_convergence/*
 detrend_data.py
 triangle.hdf5
