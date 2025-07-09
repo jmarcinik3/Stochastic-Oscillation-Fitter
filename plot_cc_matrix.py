@@ -455,6 +455,8 @@ def plotDivergence(
     data_label: str = "Data",
     model_label: str = "Model",
     cbar_label: str = "Divergence",
+    x_labelpad: int = 2,
+    y_labelpad: int = 1,
 ):
     if norm is None:
         norm = colors.Normalize(vmin=0, vmax=1)
@@ -474,16 +476,28 @@ def plotDivergence(
         norm=norm,
         cmap=cmap,
     )
-    ax_dd.set_xlabel(data_label)
-    ax_dd.set_ylabel(data_label)
+    ax_dd.set_xlabel(
+        data_label,
+        labelpad=x_labelpad,
+    )
+    ax_dd.set_ylabel(
+        data_label,
+        labelpad=y_labelpad,
+    )
 
     div_dm.plotMatrix(
         ax_dm,
         norm=norm,
         cmap=cmap,
     )
-    ax_dm.set_xlabel(data_label)
-    ax_dm.set_ylabel(model_label)
+    ax_dm.set_xlabel(
+        data_label,
+        labelpad=x_labelpad,
+    )
+    ax_dm.set_ylabel(
+        model_label,
+        labelpad=y_labelpad,
+    )
 
     if include_mm:
         div_mm = DivergenceMatrix.fromDistributions(cc_mm, cc_mm)
@@ -493,8 +507,14 @@ def plotDivergence(
             norm=norm,
             cmap=cmap,
         )
-        ax_mm.set_xlabel(model_label)
-        ax_mm.set_ylabel(model_label)
+        ax_mm.set_xlabel(
+            model_label,
+            labelpad=x_labelpad,
+        )
+        ax_mm.set_ylabel(
+            model_label,
+            labelpad=y_labelpad,
+        )
 
     mappable = cm.ScalarMappable(
         norm=norm,
@@ -507,13 +527,13 @@ def plotDivergence(
     )
     cbar.set_ticks(
         (0, 0.5, 1),
-        labels=("0.0", "0.5", "1.0"),
+        labels=("0", "", "1"),
     )
     cbar.set_ticks(np.linspace(0, 1, 11), minor=True)
     cbar.set_label(
         cbar_label,
         rotation=270,
-        labelpad=12,
+        labelpad=3.5,
     )
 
 
@@ -1738,6 +1758,10 @@ if __name__ == "__main__":
             right=0.98,
         )
 
+        fig.text(0.0050, 0.9472, "(a)")
+        fig.text(0.0050, 0.3131, "(b)")
+        fig.text(0.5446, 0.3131, "(c)")
+
         # % start: automatic generated code from pylustrator
         texts = [fig.axes[i].texts[0] for i in range(len(percentiles))]
         texts[0].set(position=(0.0264, 0.3156))
@@ -1837,17 +1861,24 @@ if __name__ == "__main__":
             1,
             3,
             figsize=(3.375, 1.4375),
-            layout="constrained",
+            layout="tight",
             width_ratios=(1, 1, 1 / 12),
         )
         plotDivergence(
             axs,
             cc_dd,
             cc_dm,
-            cc_mm=cc_mm,
+            # cc_mm=cc_mm,
             data_label="Measurement",
             model_label="Simulation",
             cbar_label=r"$D_{JS}$",
+        )
+        fig.tight_layout(pad=0, h_pad=0, w_pad=0)
+        fig.subplots_adjust(
+            left=0.03,
+            right=0.93,
+            bottom=0.12,
+            top=0.96,
         )
         plt.show()
 
